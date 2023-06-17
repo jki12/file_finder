@@ -11,6 +11,7 @@ public class Finder extends JPanel {
     private static final String DEFAULT_PATH = "C:\\";
     private static final int MIN_DEPTH = 1;
     private static final int MAX_DEPTH = 30;
+    private static final int MAX_PATH = 30;
     private static final int DEFAULT_DEPTH = 3;
 
     private JPanel searchPanel;
@@ -32,23 +33,23 @@ public class Finder extends JPanel {
 
     public Finder() {
         this.setLayout(new BorderLayout());
-        this.setSize(300, 300);
 
         // search options
         optionPanel = new JPanel();
+        optionPanel.setLayout(new FlowLayout());
         dirChooser = new JFileChooser();
         dirChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
         pathField = new JTextField(30);
         strictCheckBox = new JCheckBox("strict mode");
-        ignoreCaseCheckBox = new JCheckBox("ignore case");
+        strictCheckBox.setToolTipText("If checked, the search will consider file extensions and case sensitivity!");
 
-        depthField = new JTextField(String.valueOf(DEFAULT_DEPTH), 30);
+        depthField = new JTextField(String.valueOf(DEFAULT_DEPTH), 10);
 
         pathField.setText(DEFAULT_PATH);
         pathField.setEnabled(false);
 
-        var btn = new JButton("select path");
-        btn.addActionListener(new ActionListener() {
+        var fileChooserOpenButton = new JButton("select path");
+        fileChooserOpenButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 dirChooser.showDialog(optionPanel, "select");
@@ -59,15 +60,14 @@ public class Finder extends JPanel {
         });
 
         optionPanel.add(pathField);
-        optionPanel.add(btn); // click -> open file chooser
-        optionPanel.add(strictCheckBox);
-        optionPanel.add(ignoreCaseCheckBox);
-        optionPanel.add(new JLabel("depth"));
+        optionPanel.add(fileChooserOpenButton);
         optionPanel.add(depthField);
+        optionPanel.add(new JLabel("depth"));
+        optionPanel.add(strictCheckBox);
 
         // search field
         searchPanel = new JPanel();
-        searchField = new JTextField(10);
+        searchField = new JTextField(40);
         searchButton = new JButton("Search");
 
         searchButton.addActionListener(new ActionListener() {
@@ -75,7 +75,7 @@ public class Finder extends JPanel {
             public void actionPerformed(ActionEvent e) {
                 if (!isValid(depthField.getText())) return; // showing popup.
 
-                depth = Integer.parseInt(depthField.getText()); // valid data.
+                depth = Integer.parseInt(depthField.getText());
 
                 search(searchField.getText());
 
@@ -86,8 +86,8 @@ public class Finder extends JPanel {
         searchPanel.add(searchField);
         searchPanel.add(searchButton);
 
-        this.add(searchPanel);
-        this.add(optionPanel, BorderLayout.AFTER_LAST_LINE);
+        this.add(searchPanel, BorderLayout.CENTER);
+        this.add(optionPanel, BorderLayout.SOUTH);
     }
 
     public ArrayList<String> getFoundFiles() {
@@ -107,6 +107,10 @@ public class Finder extends JPanel {
     }
     
     private void search(String fileName) { // 찾고자 하는 파일명.
+        if (fileName.equals("") || fileName.length() >= MAX_PATH) {
+            return;
+        }
+
         foundFiles.clear();
         searchButton.setEnabled(false);
         
@@ -150,17 +154,35 @@ public class Finder extends JPanel {
             return;
         }
 
-        var list = file.list();
+        String[] list = null;
 
-        if (list == null) {
+        try {
+            list = file.list();
+
+            if (list == null) return;
+        } catch (Exception e) {
             return;
         }
+
+        String fileNameWithoutFileExtensions = removeFileExtension(fileName);
 
         for (int i = 0; i < list.length; ++i) {
             String path = file.getPath() + "\\" + list[i]; // current path.
 
-            if (compare(removeFileExtension(list[i]), removeFileExtension(fileName), false)) { // temp code.
+            if (strictCheckBox.isSelected() && compare(fileName, list[i], false)) {
                 foundFiles.add(path);
+            }
+            else if (!strictCheckBox.isSelected()) {
+                if (hasFileExtension(fileName)) { // just ignore case.
+                    if (compare(fileName, list[i], true)) {
+                        foundFiles.add(path);
+                    }
+                }
+                else {
+                    if (compare(fileNameWithoutFileExtensions, removeFileExtension(list[i]), true)) {
+                        foundFiles.add(path);
+                    }
+                }
             }
 
             boolean isDir = Files.isDirectory(Paths.get(path));
@@ -171,15 +193,19 @@ public class Finder extends JPanel {
         }
     }
 
-    private String removeFileExtension(String fileName) { // test..
+    private boolean hasFileExtension(String fileName) {
         int index = fileName.lastIndexOf('.');
 
-        if (index == -1) {
+        return (index != -1);
+    }
+
+    private String removeFileExtension(String fileName) {
+        if (!hasFileExtension(fileName)) {
             return fileName;
         }
 
         sb.setLength(0);
-        for (int i = 0; i < index; ++i) {
+        for (int i = 0; i < fileName.lastIndexOf('.'); ++i) {
             sb.append(fileName.charAt(i));
         }
 

@@ -1,21 +1,34 @@
 import javax.swing.*;
 import java.awt.*;
-import java.io.File;
 
 public class Main {
 
     public static void main(String[] args) {
+        var f = new JFrame();
+        var c = new GridBagConstraints();
 
-        var path = new File("C:\\Users\\sjak0\\Desktop\\algorithm");
-        var fileName = "b1697.java";
+        f.setSize(800, 480);
+        f.setResizable(false);
+        f.setLayout(new GridBagLayout());
 
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.weighty = 0.1;
+        c.gridx = 0;
+        c.gridy = 0;
+        c.gridwidth = 1;
 
+        var resViewer = new ResultViewer();
+        f.add(new Finder(resViewer), c);
 
-        var f = new Frame();
-        f.setSize(1000, 1000); // tnwjd
+        c.fill = GridBagConstraints.BOTH;
+        c.weightx = 0.1;
+        c.weighty = 0.7;
+        c.gridx = 0;
+        c.gridy = 1;
+        c.gridwidth = 1;
 
-        // f.add(new Finder());
-        f.add(new Finder(), BorderLayout.BEFORE_FIRST_LINE);
+        f.add(resViewer, c);
+
         f.setVisible(true);
     }
 }

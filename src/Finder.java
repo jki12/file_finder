@@ -20,10 +20,10 @@ public class Finder extends JPanel {
 
     private JPanel optionPanel;
     private JCheckBox strictCheckBox;
-    private JCheckBox ignoreCaseCheckBox;
     private JFileChooser dirChooser;
     private JTextField pathField; // always disabled.
     private JTextField depthField;
+    private final ResultViewer resultViewer;
 
     private String findPath = DEFAULT_PATH;
     private int depth = DEFAULT_DEPTH;
@@ -31,7 +31,8 @@ public class Finder extends JPanel {
     private StringBuilder sb = new StringBuilder();
     private ArrayList<String> foundFiles = new ArrayList<>();
 
-    public Finder() {
+    public Finder(ResultViewer resultViewer) {
+        this.resultViewer = resultViewer;
         this.setLayout(new BorderLayout());
 
         // search options
@@ -78,6 +79,7 @@ public class Finder extends JPanel {
                 depth = Integer.parseInt(depthField.getText());
 
                 search(searchField.getText());
+                resultViewer.setResult(foundFiles);
 
                 System.out.println("done : " + foundFiles.size());
             }

@@ -1,5 +1,6 @@
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.WindowEvent;
 
 public class Main {
 
@@ -7,7 +8,7 @@ public class Main {
         var f = new JFrame();
         var c = new GridBagConstraints();
 
-        f.setSize(800, 480);
+        f.setSize(960, 640);
         f.setResizable(false);
         f.setLayout(new GridBagLayout());
 
@@ -18,7 +19,8 @@ public class Main {
         c.gridwidth = 1;
 
         var resViewer = new ResultViewer();
-        f.add(new Finder(resViewer), c);
+        var scanFileCountLabel = new JLabel(":)");
+        f.add(new Finder(resViewer, scanFileCountLabel), c);
 
         c.fill = GridBagConstraints.BOTH;
         c.weightx = 0.1;
@@ -29,6 +31,14 @@ public class Main {
 
         f.add(resViewer, c);
 
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.weighty = 0.01;
+        c.gridy = 2;
+        scanFileCountLabel.setBorder(BorderFactory.createEmptyBorder(3, 3, 3, 3));
+
+        f.add(scanFileCountLabel, c);
+
         f.setVisible(true);
+        // f.dispose();
     }
 }

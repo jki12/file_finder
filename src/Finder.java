@@ -1,7 +1,6 @@
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import java.awt.event.*;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -10,8 +9,8 @@ import java.util.ArrayList;
 public class Finder extends JPanel {
     private static final String DEFAULT_PATH = "C:\\";
     private static final int MIN_DEPTH = 1;
-    private static final int MAX_DEPTH = 30;
-    private static final int MAX_PATH = 30;
+    private static final int MAX_DEPTH = 20;
+    private static final int MAX_PATH = 256;
     private static final int DEFAULT_DEPTH = 3;
 
     private JPanel searchPanel;
@@ -28,10 +27,10 @@ public class Finder extends JPanel {
     private String findPath = DEFAULT_PATH;
     private int depth = DEFAULT_DEPTH;
 
-    private StringBuilder sb = new StringBuilder();
+    private int scanFileCount;
     private ArrayList<String> foundFiles = new ArrayList<>();
 
-    public Finder(ResultViewer resultViewer) {
+    public Finder(ResultViewer resultViewer, JLabel scanFileCountLabel) {
         this.resultViewer = resultViewer;
         this.setLayout(new BorderLayout());
 
@@ -71,17 +70,19 @@ public class Finder extends JPanel {
         searchField = new JTextField(40);
         searchButton = new JButton("Search");
 
+        searchField.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == 10) { // enter code : 10.
+                    searchHandler(scanFileCountLabel);
+                }
+            }
+        });
+
         searchButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                if (!isValid(depthField.getText())) return; // showing popup.
-
-                depth = Integer.parseInt(depthField.getText());
-
-                search(searchField.getText());
-                resultViewer.setResult(foundFiles);
-
-                System.out.println("done : " + foundFiles.size());
+                searchHandler(scanFileCountLabel);
             }
         });
 
@@ -90,6 +91,20 @@ public class Finder extends JPanel {
 
         this.add(searchPanel, BorderLayout.CENTER);
         this.add(optionPanel, BorderLayout.SOUTH);
+    }
+
+    private void searchHandler(JLabel scanFileCountLabel) {
+        if (!isValid(depthField.getText())) {
+            JOptionPane.showMessageDialog(null, "Only numbers are allowed, and it should be between 1 and 20");
+
+            return;
+        }
+
+        depth = Integer.parseInt(depthField.getText());
+
+        search(searchField.getText());
+        resultViewer.setResult(foundFiles);
+        scanFileCountLabel.setText(String.format("Search result : %d / %d", foundFiles.size(), scanFileCount));
     }
 
     public ArrayList<String> getFoundFiles() {
@@ -109,10 +124,13 @@ public class Finder extends JPanel {
     }
     
     private void search(String fileName) { // 찾고자 하는 파일명.
-        if (fileName.equals("") || fileName.length() >= MAX_PATH) {
+        if (fileName.length() == 0 || fileName.length() >= MAX_PATH) {
+            JOptionPane.showMessageDialog(null, "Invalid or emepty value entered");
+
             return;
         }
 
+        scanFileCount = 0;
         foundFiles.clear();
         searchButton.setEnabled(false);
         
@@ -121,31 +139,12 @@ public class Finder extends JPanel {
             
             dfs(file, fileName, 0);
         } catch (Exception e) {
-            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Exception : " + e.getMessage());
+
+            // e.printStackTrace();
         }
         
         searchButton.setEnabled(true);
-    }
-
-    private boolean compare(final String s1, final String s2, boolean ignoreCase) {
-        if (s1.length() != s2.length()) {
-            return false;
-        }
-
-        for (int i = 0; i < s1.length(); ++i) {
-            if (ignoreCase) {
-                if ((s1.charAt(i) | ' ') != (s2.charAt(i) | ' ')) {
-                    return false;
-                }
-            }
-            else {
-                if (s1.charAt(i) != s2.charAt(i)) {
-                    return false;
-                }
-            }
-        }
-
-        return true;
     }
 
     public void dfs(File file, final String fileName, int depth)
@@ -156,8 +155,7 @@ public class Finder extends JPanel {
             return;
         }
 
-        String[] list = null;
-
+        String[] list;
         try {
             list = file.list();
 
@@ -166,22 +164,23 @@ public class Finder extends JPanel {
             return;
         }
 
-        String fileNameWithoutFileExtensions = removeFileExtension(fileName);
+        String fileNameWithoutFileExtensions = Util.removeFileExtension(fileName);
 
+        scanFileCount += list.length;
         for (int i = 0; i < list.length; ++i) {
             String path = file.getPath() + "\\" + list[i]; // current path.
 
-            if (strictCheckBox.isSelected() && compare(fileName, list[i], false)) {
+            if (strictCheckBox.isSelected() && Util.compare(fileName, list[i], false)) {
                 foundFiles.add(path);
             }
             else if (!strictCheckBox.isSelected()) {
-                if (hasFileExtension(fileName)) { // just ignore case.
-                    if (compare(fileName, list[i], true)) {
+                if (Util.hasFileExtension(fileName)) { // just ignore case.
+                    if (Util.compare(fileName, list[i], true)) {
                         foundFiles.add(path);
                     }
                 }
                 else {
-                    if (compare(fileNameWithoutFileExtensions, removeFileExtension(list[i]), true)) {
+                    if (Util.compare(fileNameWithoutFileExtensions, Util.removeFileExtension(list[i]), true)) {
                         foundFiles.add(path);
                     }
                 }
@@ -193,24 +192,5 @@ public class Finder extends JPanel {
                 dfs(new File(path), fileName, depth + 1);
             }
         }
-    }
-
-    private boolean hasFileExtension(String fileName) {
-        int index = fileName.lastIndexOf('.');
-
-        return (index != -1);
-    }
-
-    private String removeFileExtension(String fileName) {
-        if (!hasFileExtension(fileName)) {
-            return fileName;
-        }
-
-        sb.setLength(0);
-        for (int i = 0; i < fileName.lastIndexOf('.'); ++i) {
-            sb.append(fileName.charAt(i));
-        }
-
-        return sb.toString();
     }
 }
